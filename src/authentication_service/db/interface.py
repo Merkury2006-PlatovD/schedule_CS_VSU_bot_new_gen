@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from authentication_service.db.model import UserDTO
+from src.authentication_service.db.model import UserDTO
 
 
 class DatabaseConnectable(ABC):
@@ -44,6 +44,9 @@ class DataTransferable(ABC):
 
     @abstractmethod
     def check_api_key_exists_for_user(self, user_id: int) -> bool: pass
+
+    @abstractmethod
+    def get_api_key_for_user(self, user_id: int) -> str | None: pass
 
 
 class AuthenticationConnector(DatabaseConnectable, DataTransferable, ABC):

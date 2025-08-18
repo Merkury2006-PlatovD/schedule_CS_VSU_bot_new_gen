@@ -1,0 +1,55 @@
+services:
+  uvicorn:
+    build: .
+    container_name: uvicorn
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    networks:
+      - app
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      - redis
+      - mysql_bot
+
+
+  redis:
+    image: redis:7.0-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - app
+    environment:
+      - REDIS_PORT=${REDIS_PORT}
+    volumes:
+      - redis_data:/data
+
+  mysql_bot:
+    image: "mysql:8.0.43"
+    container_name: mysql_bot
+    restart: always
+    volumes:
+      - mysql_data:/var/lib/mysql
+    env_file:
+      - .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_USER_PASSWORD}
+    networks:
+      - app
+    ports:
+      - "3306:3306"
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:

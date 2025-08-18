@@ -4,9 +4,9 @@ import mysql.connector
 from mysql.connector.aio import MySQLConnectionAbstract
 from starlette.config import environ
 
-from authentication_service.db.interface import AuthenticationConnector
-from authentication_service.db.model import UserDTO
-from authentication_service.util.logger import set_up_logger
+from src.authentication_service.db.interface import AuthenticationConnector
+from src.authentication_service.db.model import UserDTO
+from src.tools_wrappers.logger import set_up_logger
 
 """
 Сделанно под следующую структуру
@@ -16,7 +16,7 @@ CREATE TABLE user(
     course INT,
     main_group INT,
     sub_group int
-)
+);
 
 CREATE TABLE api(
     user_id INT PRIMARY KEY,
@@ -50,7 +50,7 @@ class DataBase(AuthenticationConnector):
                     user=environ.get('DB_USER'),
                     password=environ.get('DB_USER_PASSWORD'),
                     host=environ.get('DB_HOST'),
-                    database=environ.get('DB_NAME')
+                    database=environ.get('DB_NAME'),
                 )
             except (mysql.connector.Error, IOError) as err:
                 if attempt + 1 == max_attempt_cnt:
@@ -78,7 +78,7 @@ class DataBase(AuthenticationConnector):
     def __get_init_vars(self):
         self.__users_db_name = environ.get('USERS_TABLE_NAME')
         self.__api_key_db_name = environ.get('API_TABLE_NAME')
-        self.__logger = set_up_logger()
+        self.__logger = set_up_logger('log/authentication.log')
 
     def close_connection(self):
         self.__connection.close()
@@ -96,7 +96,7 @@ class DataBase(AuthenticationConnector):
         return False
 
     def check_apikey_exists(self, key: str) -> bool:
-        query = f"SELECT user_id FROM {self.__users_db_name} INNER JOIN {self.__api_key_db_name} USING(user_id) WHERE api_key='%s'"
+        query = f"SELECT user_id FROM {self.__api_key_db_name} WHERE api_key=%s"
         params = (key,)
         try:
             with self.__connection.cursor() as cursor:
@@ -215,3 +215,14 @@ class DataBase(AuthenticationConnector):
         except mysql.connector.Error as err:
             self.__logger.warning('Error while check_api_key_exists_for_user(). %s', err)
         return False
+
+    def get_api_key_for_user(self, user_id: int) -> str | None:
+        query = f'SELECT api_key FROM {self.__api_key_db_name} WHERE user_id=%s'
+        params = (user_id,)
+        try:
+            with self.__connection.cursor() as cursor:
+                cursor.execute(query, params)
+                return cursor.fetchone()
+        except mysql.connector.Error as err:
+            self.__logger.warning('Error while remove_api_key(). %s', err)
+        return None
