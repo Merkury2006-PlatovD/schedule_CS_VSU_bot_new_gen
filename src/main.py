@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from starlette.config import environ
 from telebot import TeleBot
-
+from fastapi.middleware.cors import CORSMiddleware
 from src.authentication_service.authentification_service import AuthenticationService
 from src.authentication_service.db.mysql_repo import DataBase
 from src.controller_api import APIController
@@ -55,3 +55,13 @@ api_controller = APIController(
 )
 api_controller.start_controller()
 app.include_router(api_controller.get_router())
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
