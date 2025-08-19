@@ -1,9 +1,11 @@
 from logging import Logger
 
 import telebot
+from telebot.types import Message
 
 from src.authentication_service.authentification_service import AuthenticationService
 from src.authentication_service.util.enum import UpdateType
+from src.authentication_service.util.error import APIError
 from src.parser_service.parser_service import ParserService
 from src.parser_service.util.error import ScheduleParserFindError
 from src.tools_wrappers.keyboard_generators import *
@@ -34,7 +36,9 @@ class BotController:
                 telebot.types.BotCommand("updateinfo", "Поменять информацию о себе"),
                 telebot.types.BotCommand("mistake", "Сообщить об ошибке в расписании"),
                 telebot.types.BotCommand("znam", "Посмотреть расписание на знаменатель"),
-                telebot.types.BotCommand("chis", "Посмотреть расписание на числитель")
+                telebot.types.BotCommand("chis", "Посмотреть расписание на числитель"),
+                telebot.types.BotCommand("getapi", "Получить API-токен"),
+                telebot.types.BotCommand("deleteapi", "Удалить API-токен")
             ])
 
         @self.__bot.message_handler(commands=['start'])
@@ -146,6 +150,25 @@ class BotController:
                     handle_error(user_id, e,
                                  "Возможно ошибка связана с обновлением на сервере. В таком случае просим Вас просто заново ввести данные. Мы сделам все возможное, чтобы это не повторилось.\n\n❌ Мы не смогли найти учебную группу с вашими данными.\n🔍 Убедитесь, что вы правильно ввели все данные.\n💡 Попробуйте ввести их еще раз.")
                     handle_profile_update(message)
+
+        @self.__bot.message_handler(commands=['getapi'])
+        def handle_api_get(message: Message):
+            user_id = message.from_user.id
+            try:
+                api_key = self.__authentication_service.add_new_api_key(user_id)
+                self.__bot.send_message(user_id, f"Your API key:\n{api_key}")
+            except APIError as err:
+                handle_error(user_id, err,
+                             "Ошибка создания API ключа. Убедитесь, что он не был создан до настоящего времени")
+
+        @self.__bot.message_handler(commands=['deleteapi'])
+        def handle_api_key_delete(message: Message):
+            user_id = message.from_user.id
+            try:
+                self.__authentication_service.remove_api_key(user_id)
+                self.__bot.send_message(user_id, "Ключ API успешно удален! Вы можете создать новый командой getapi")
+            except Exception as err:
+                handle_error(user_id, err, 'Ошибка удаления API')
 
         @self.__bot.message_handler(
             func=lambda message: message.text not in ["📅 Понедельник", "📅 Вторник", "📅 Среда", "📅 Четверг", "📅 Пятница",
