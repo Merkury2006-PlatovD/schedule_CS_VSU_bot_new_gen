@@ -9,6 +9,7 @@ from src.authentication_service.authentification_service import AuthenticationSe
 from src.authentication_service.db.model import UserDTO
 from src.parser_service.parser_service import ParserService
 from src.tools_wrappers.redis_repo import RedisDatabase
+from src.tools_wrappers.scheduler_wrapper import SchedulerWrapper
 
 
 class APIController:
@@ -34,8 +35,14 @@ class APIController:
             if not self.__authentication_service.has_key(token):
                 response.status = status.HTTP_401_UNAUTHORIZED
 
-            return self.__parser_service.get_schedule_on_day(UserDTO(0, course, group, subgroup), day,
-                                                             RedisDatabase.get_week_type())
+            return {
+                'course': course,
+                'group': group,
+                'sub_group': subgroup,
+                'day': SchedulerWrapper.get_day_from_num(day),
+                'schedule': self.__parser_service.get_schedule_on_day(UserDTO(0, course, group, subgroup), day,
+                                                                      RedisDatabase.get_week_type()),
+            }
 
         @self.__router.post(environ.get("WEBHOOK_URL"))
         async def process_webhook(request: Request):

@@ -15,3 +15,16 @@ class SchedulerWrapper:
     @classmethod
     def on_start(cls):
         download_and_update()
+
+    @classmethod
+    def get_day_from_num(cls, day: int):
+        days = {
+            0: "понедельник",
+            1: "вторник",
+            2: "среда",
+            3: "четверг",
+            4: "пятница",
+            5: "суббота",
+            6: "воскресенье"
+        }
+        return days.get(day)
