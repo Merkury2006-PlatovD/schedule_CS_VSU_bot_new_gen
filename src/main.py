@@ -57,11 +57,3 @@ api_controller.start_controller()
 app.include_router(api_controller.get_router())
 
 origins = ["*"]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
