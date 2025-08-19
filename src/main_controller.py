@@ -6,15 +6,18 @@ from telebot import TeleBot
 from src.authentication_service.authentification_service import AuthenticationService
 from src.authentication_service.db.model import UserDTO
 from src.authentication_service.db.mysql_repo import DataBase
+from src.controller_bot import BotController
 from src.parser_service.excell_converter import ScheduleParser
 from src.parser_service.parser_service import ParserService
+from src.tools_wrappers.logger import set_up_logger
 from src.tools_wrappers.redis_repo import RedisDatabase
+from src.tools_wrappers.redis_wrapper import RedisWrapper
 from src.tools_wrappers.scheduler_wrapper import SchedulerWrapper
 
 
 def create_configured_bot() -> TeleBot:
     bot_ex = TeleBot(environ.get('BOT_TOKEN'))
-    bot_ex.set_webhook(environ.get('WEBHOOK'))
+    # bot_ex.set_webhook(environ.get('WEBHOOK'))
     return bot_ex
 
 
@@ -35,24 +38,23 @@ parser_service = ParserService(ScheduleParser(environ.get('MAIN_SCHEDULE_PATH'))
 authentication_service = AuthenticationService(db)
 authentication_service.start_service()
 
+bot = create_configured_bot()
 
-# # setting handlers for bot
-# bot_controller = BotController(
-#     bot,
-#     parser_service,
-#     authentication_service,
-#     RedisWrapper.get_redis(),
-#     set_up_logger('./log/bot_controller.log')
-# )
+# setting handlers for bot
+bot_controller = BotController(
+    bot,
+    parser_service,
+    authentication_service,
+    set_up_logger('./log/bot_controller.log')
+)
+bot_controller.start_controller()
+
+bot.polling(none_stop=True, timeout=60, long_polling_timeout=60)
 
 
 @app.post('/api/schedule/{token}/{course}/{group}/{subgroup}/{day}')
 def get_schedule(token: str, course: int, group: int, subgroup: int, day: int, response: Response):
-    print(token)
     if not authentication_service.has_key(token):
         response.status = status.HTTP_401_UNAUTHORIZED
-        return 'fuck'
 
-    print(course, group, subgroup)
-    print(RedisDatabase.get_week_type())
     return parser_service.get_schedule_on_day(UserDTO(0, course, group, subgroup), day, RedisDatabase.get_week_type())

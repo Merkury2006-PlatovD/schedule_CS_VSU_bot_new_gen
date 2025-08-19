@@ -1,8 +1,13 @@
+import json
+from typing import Any
+
+from src.tools_wrappers.logger import set_up_logger
 from src.tools_wrappers.redis_wrapper import RedisWrapper
 
 
 class RedisDatabase:
     __redis = RedisWrapper.get_redis()
+    __logger = set_up_logger('./log/redis_db.log')
 
     @classmethod
     def get_week_type(cls) -> int:
@@ -27,7 +32,7 @@ class RedisDatabase:
 
     @classmethod
     def get_users_per_day(cls):
-        return int(cls.__redis.get("var:users_per_day"), 0)
+        return int(cls.__redis.get("var:users_per_day"))
 
     @classmethod
     def increment_users_per_day(cls):

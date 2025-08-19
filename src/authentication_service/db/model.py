@@ -2,11 +2,11 @@ import json
 
 
 class UserDTO:
-    def __init__(self, user_id, course, group, subgroup):
+    def __init__(self, user_id, course, main_group, sub_group):
         self.__user_id = user_id
         self.__course = course
-        self.__main_group = group
-        self.__sub_group = subgroup
+        self.__main_group = main_group
+        self.__sub_group = sub_group
 
     def __str__(self):
         return f'Пользователь с id={self.__user_id} с {self.__course} курса из {self.__main_group} группы {self.__sub_group} подгруппы'
@@ -25,7 +25,7 @@ class UserDTO:
 
     def get_data_json(self):
         return json.dumps({
-            'id': self.__user_id,
+            'user_id': self.__user_id,
             'course': self.__course,
             'main_group': self.__main_group,
             'sub_group': self.__sub_group
@@ -34,7 +34,7 @@ class UserDTO:
     @classmethod
     def create_from_json(cls, json_data):
         try:
-            (user_id, course, main_group, subgroup) = json.loads(json_data)
-            return UserDTO(user_id, course, main_group, subgroup)
+            (user_id, course, main_group, subgroup) = json.loads(json_data).values()
+            return UserDTO(user_id, int(course), int(main_group), int(subgroup))
         except json.JSONDecodeError:
             return None

@@ -14,14 +14,12 @@ class BotController:
     __bot: telebot.TeleBot
     __parser_service: ParserService
     __authentication_service: AuthenticationService
-    __redis_data: RedisDatabase
     __logger: Logger
 
-    def __init__(self, bot, parser_service, authentication_service, redis_data, logger):
+    def __init__(self, bot, parser_service, authentication_service, logger):
         self.__bot = bot
         self.__parser_service = parser_service
         self.__authentication_service = authentication_service
-        self.__redis_data = redis_data
         self.__logger = logger
 
     def start_controller(self):
@@ -116,27 +114,13 @@ class BotController:
         @self.__bot.message_handler(commands=['getUsersPerDay'])
         def handle_users_per_day_request(message):
             self.__bot.send_message(message.from_user.id,
-                                    f"Запросов за текущий день {self.__redis_data.get_users_per_day()}")
-
-        # @self.__bot.message_handler(commands=['sendMessage'])
-        # def handle_send_message(message):
-        #     if str(message.from_user.id) in [os.getenv("ADMIN_TG_ID1"), os.getenv("ADMIN_TG_ID2")]:
-        #         args = message.text.split(maxsplit=2)
-        #         if len(args) < 3:
-        #             bot.reply_to(message, "⚠ Использование: /sendMessage [id пользователя] \"сообщение\"")
-        #             return
-        #
-        #         user_id = int(args[1])
-        #         user_message = args[2]
-        #
-        #         bot.send_message(user_id, user_message)
-        #         bot.reply_to(message, f"✅ Сообщение отправлено пользователю {user_id}")
+                                    f"Запросов за текущий день {RedisDatabase.get_users_per_day()}")
 
         @self.__bot.message_handler(commands=['chis', 'znam'])
         def handle_chis_znam_schedule(message):
             user_id = message.from_user.id
             print(f"Запрос от {user_id}: {message.from_user.username}")
-            self.__redis_data.increment_users_per_day()
+            RedisDatabase.increment_users_per_day()
 
             if not self.__authentication_service.has_user(user_id):
                 self.__authentication_service.add_user(user_id)
@@ -179,10 +163,10 @@ class BotController:
                         "📅 Суббота": 5}
             user_id = message.from_user.id
             print(f"Запрос от {user_id}: {message.from_user.username}")
-            self.__redis_data.increment_users_per_day()
+            RedisDatabase.increment_users_per_day()
             day = days_map[message.text]
             try:
-                week_type = self.__redis_data.get_week_type()
+                week_type = RedisDatabase.get_week_type()
                 user = self.__authentication_service.get_user(user_id)
                 schedule = self.__parser_service.get_schedule_on_day(user, day)
                 out_data_formated = f"📅 *Расписание занятий на {message.text.split(' ')[-1]}/{'числ' if week_type == 0 else 'знам'}:*\n\n"
@@ -213,7 +197,7 @@ class BotController:
             user_id = call.from_user.id
             group = int(call.data.split("_")[1])
 
-            self.__authentication_service.update_user_data(UpdateType.course, user_id, group)
+            self.__authentication_service.update_user_data(UpdateType.main_group, user_id, group)
             keyboard = get_subgroup_keyboard()
             self.__bot.send_message(user_id, "Теперь выбери свою подгруппу:", reply_markup=keyboard)
 

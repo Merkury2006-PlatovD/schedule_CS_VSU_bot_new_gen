@@ -12,14 +12,14 @@ from src.tools_wrappers.logger import set_up_logger
 Сделанно под следующую структуру
 
 CREATE TABLE user(
-    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT PRIMARY KEY AUTO_INCREMENT,
     course INT,
     main_group INT,
     sub_group int
 );
 
 CREATE TABLE api(
-    user_id INT PRIMARY KEY,
+    user_id BIGINT PRIMARY KEY,
     api_key VARCHAR(100),
     FOREIGN KEY (user_id) REFERENCES user (user_id)
 );
@@ -119,7 +119,7 @@ class DataBase(AuthenticationConnector):
         return None
 
     def add_new_user_by_id(self, user_id: int) -> bool:
-        query = f'INSERT INTO {self.__users_db_name}(user_id, course, main_group, sub_group) VALUE (%s, Null, Null, Null)'
+        query = f'INSERT INTO {self.__users_db_name}(user_id, course, main_group, sub_group) VALUES (%s, Null, Null, Null)'
         params = (user_id,)
         try:
             if not isinstance(user_id, int):

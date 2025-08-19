@@ -7,9 +7,10 @@ import mysql.connector
 import redis
 from redis import Redis
 
+from src.authentication_service.db.interface import AuthenticationConnector
+from src.authentication_service.db.model import UserDTO
 from src.authentication_service.util.error import APIError
 from src.authentication_service.util.error import DatabaseOperationException
-from src.authentication_service.db.interface import AuthenticationConnector
 from src.tools_wrappers.logger import set_up_logger
 from src.tools_wrappers.redis_wrapper import RedisWrapper
 
@@ -100,12 +101,14 @@ class AuthenticationService:
         return self.__db.check_user_exists(user_id)
 
     def get_user(self, user_id):
-        user = self.__redis.get(f"user:{user_id}")
-        if user:
-            return user
+        data = self.__redis.get(f"user:{user_id}")
+        if data:
+            user = UserDTO.create_from_json(self.__redis.get(f"user:{user_id}"))
+            if user:
+                return user
 
         user = self.__db.get_user(user_id)
         if not user:
             return None
-        self.__redis.set(f"user:{user_id}", user.get_data_json(), ex=RedisWrapper.USER_SAVING_DURAtION)
+        self.__redis.set(f"user:{user_id}", user.get_data_json(), ex=RedisWrapper.USER_SAVING_DURATION)
         return user
