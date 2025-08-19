@@ -9,6 +9,7 @@ services:
       - .env
     networks:
       - app
+      - public_net
     volumes:
       - ./src:/app/src
     depends_on:
@@ -49,6 +50,8 @@ services:
 networks:
   app:
     driver: bridge
+  public_net:
+    external: true
 
 volumes:
   mysql_data:

@@ -1,8 +1,9 @@
 from logging import Logger
 from os import environ
+
 import telebot
 
-from fastapi import APIRouter, status, Response
+from fastapi import APIRouter, status, Response, Request
 
 from src.authentication_service.authentification_service import AuthenticationService
 from src.authentication_service.db.model import UserDTO
@@ -37,10 +38,16 @@ class APIController:
                                                              RedisDatabase.get_week_type())
 
         @self.__router.post(environ.get("WEBHOOK_URL"))
-        def process_webhook(update: dict):
-            if update:
-                update = telebot.types.Update.de_json(update)
+        def process_webhook(request: Request):
+            try:
+                json_data = request.json()
+                update = telebot.types.Update.de_json(json_data)
                 self.__bot.process_new_updates(update)
+            except Exception as err:
+                return {
+                    'status': 'error',
+                    'message': str(err)
+                }, 500
 
     def get_router(self):
         return self.__router
