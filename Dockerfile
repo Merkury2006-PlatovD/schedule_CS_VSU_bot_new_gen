@@ -6,6 +6,6 @@ RUN pip install -r requirements.txt
 WORKDIR /app
 COPY . .
 
-EXPOSE 8000
+EXPOSE 8443
 
-CMD ["uvicorn", "src.main_controller:app", "--host", "0.0.0.0"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8443"]

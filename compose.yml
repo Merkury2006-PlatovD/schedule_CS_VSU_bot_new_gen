@@ -4,7 +4,7 @@ services:
     container_name: uvicorn
     restart: always
     ports:
-      - "8000:8000"
+      - "8443:8443"
     env_file:
       - .env
     networks:
@@ -19,8 +19,8 @@ services:
   redis:
     image: redis:7.0-alpine
     restart: always
-    ports:
-      - "6379:6379"
+    expose:
+      - 6379
     networks:
       - app
     environment:
@@ -43,8 +43,8 @@ services:
       - MYSQL_PASSWORD=${DB_USER_PASSWORD}
     networks:
       - app
-    ports:
-      - "3306:3306"
+    expose:
+      - 3306
 
 networks:
   app:
