@@ -3,7 +3,7 @@ from os import environ
 
 import telebot
 
-from fastapi import APIRouter, status, Response, Request
+from fastapi import APIRouter, status, Response, Request, HTTPException
 
 from src.authentication_service.authentification_service import AuthenticationService
 from src.authentication_service.db.model import UserDTO
@@ -38,16 +38,16 @@ class APIController:
                                                              RedisDatabase.get_week_type())
 
         @self.__router.post(environ.get("WEBHOOK_URL"))
-        def process_webhook(request: Request):
+        async def process_webhook(request: Request):
             try:
-                json_data = request.json()
+                raw_data = await request.body()
+                json_data = raw_data.decode('utf-8')
                 update = telebot.types.Update.de_json(json_data)
-                self.__bot.process_new_updates(update)
+                self.__bot.process_new_updates([update])
+                return {'status': 'ok'}
             except Exception as err:
-                return {
-                    'status': 'error',
-                    'message': str(err)
-                }, 500
+                print(err)
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=err)
 
     def get_router(self):
         return self.__router
