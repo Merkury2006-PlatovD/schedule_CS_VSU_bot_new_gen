@@ -2,14 +2,13 @@ from logging import Logger
 from os import environ
 
 import telebot
-
 from fastapi import APIRouter, status, Response, Request, HTTPException
 
 from src.authentication_service.authentification_service import AuthenticationService
-from src.authentication_service.db.model import UserDTO
+from src.authentication_service.model.model import UserDTO
+from src.authentication_service.db.redis_repo import RedisDatabase
 from src.parser_service.parser_service import ParserService
-from src.tools_wrappers.redis_repo import RedisDatabase
-from src.tools_wrappers.scheduler_wrapper import SchedulerWrapper
+from src.tools.scheduler_wrapper import SchedulerWrapper
 
 
 class APIController:
@@ -17,13 +16,17 @@ class APIController:
     __router: APIRouter
     __parser_service: ParserService
     __authentication_service: AuthenticationService
+    __redis_db: RedisDatabase
     __logger: Logger
 
-    def __init__(self, bot, parser_service, authentication_service, logger):
+    def __init__(self, bot, parser_service: ParserService, authentication_service: AuthenticationService,
+                 redis_db: RedisDatabase,
+                 logger: Logger):
         self.__bot = bot
         self.__router = APIRouter()
         self.__parser_service = parser_service
         self.__authentication_service = authentication_service
+        self.__redis_db = redis_db
         self.__logger = logger
 
     def start_controller(self):
@@ -41,7 +44,7 @@ class APIController:
                 'sub_group': subgroup,
                 'day': SchedulerWrapper.get_day_from_num(day),
                 'schedule': self.__parser_service.get_schedule_on_day(UserDTO(0, course, group, subgroup), day,
-                                                                      RedisDatabase.get_week_type()),
+                                                                      self.__redis_db.get_week_type()),
             }
 
         @self.__router.post(environ.get("WEBHOOK_URL"))

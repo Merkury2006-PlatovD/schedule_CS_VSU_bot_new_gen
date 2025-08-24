@@ -1,11 +1,15 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
-from src.authentication_service.db.model import UserDTO
+from src.authentication_service.model.model import UserDTO
 
 
 class DatabaseConnectable(ABC):
     @abstractmethod
     def init_connection(self) -> None: pass
+
+    @abstractmethod
+    def get_connection(self) -> Any: pass
 
     @abstractmethod
     def close_connection(self) -> None: pass
@@ -47,7 +51,3 @@ class DataTransferable(ABC):
 
     @abstractmethod
     def get_api_key_for_user(self, user_id: int) -> str | None: pass
-
-
-class AuthenticationConnector(DatabaseConnectable, DataTransferable, ABC):
-    pass

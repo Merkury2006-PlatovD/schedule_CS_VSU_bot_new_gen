@@ -10,7 +10,7 @@ from googleapiclient.http import MediaIoBaseDownload
 from httplib2 import HttpLib2Error
 
 from src.parser_service.util.error import NoReserveFileError
-from src.tools_wrappers.logger import set_up_logger
+from src.tools.logger import set_up_logger
 
 logger = set_up_logger('./log/excell_loader.log')
 

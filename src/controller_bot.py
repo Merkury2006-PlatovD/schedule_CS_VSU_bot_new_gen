@@ -8,20 +8,22 @@ from src.authentication_service.util.enum import UpdateType
 from src.authentication_service.util.error import APIError
 from src.parser_service.parser_service import ParserService
 from src.parser_service.util.error import ScheduleParserFindError
-from src.tools_wrappers.keyboard_generators import *
-from src.tools_wrappers.redis_repo import RedisDatabase
+from src.tools.keyboard_generators import *
+from src.authentication_service.db.redis_repo import RedisDatabase
 
 
 class BotController:
     __bot: telebot.TeleBot
     __parser_service: ParserService
     __authentication_service: AuthenticationService
+    __redis_db: RedisDatabase
     __logger: Logger
 
-    def __init__(self, bot, parser_service, authentication_service, logger):
+    def __init__(self, bot, parser_service, authentication_service, redis_db: RedisDatabase, logger):
         self.__bot = bot
         self.__parser_service = parser_service
         self.__authentication_service = authentication_service
+        self.__redis_db = redis_db
         self.__logger = logger
 
     def start_controller(self):
@@ -118,13 +120,13 @@ class BotController:
         @self.__bot.message_handler(commands=['getUsersPerDay'])
         def handle_users_per_day_request(message):
             self.__bot.send_message(message.from_user.id,
-                                    f"Запросов за текущий день {RedisDatabase.get_users_per_day()}")
+                                    f"Запросов за текущий день {self.__redis_db.get_users_per_day()}")
 
         @self.__bot.message_handler(commands=['chis', 'znam'])
         def handle_chis_znam_schedule(message):
             user_id = message.from_user.id
             print(f"Запрос от {user_id}: {message.from_user.username}")
-            RedisDatabase.increment_users_per_day()
+            self.__redis_db.increment_users_per_day()
 
             if not self.__authentication_service.has_user(user_id):
                 self.__authentication_service.add_user(user_id)
@@ -186,10 +188,10 @@ class BotController:
                         "📅 Суббота": 5}
             user_id = message.from_user.id
             print(f"Запрос от {user_id}: {message.from_user.username}")
-            RedisDatabase.increment_users_per_day()
+            self.__redis_db.increment_users_per_day()
             day = days_map[message.text]
             try:
-                week_type = RedisDatabase.get_week_type()
+                week_type = self.__redis_db.get_week_type()
                 user = self.__authentication_service.get_user(user_id)
                 schedule = self.__parser_service.get_schedule_on_day(user, day)
                 out_data_formated = f"📅 *Расписание занятий на {message.text.split(' ')[-1]}/{'числ' if week_type == 0 else 'знам'}:*\n\n"

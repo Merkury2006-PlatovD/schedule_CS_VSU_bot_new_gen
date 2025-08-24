@@ -1,12 +1,12 @@
 from logging import Logger
+from os import getenv
 
 import mysql.connector
 from mysql.connector.aio import MySQLConnectionAbstract
-from starlette.config import environ
 
-from src.authentication_service.db.interface import AuthenticationConnector
-from src.authentication_service.db.model import UserDTO
-from src.tools_wrappers.logger import set_up_logger
+from src.authentication_service.util.interface import DataTransferable
+from src.authentication_service.model.model import UserDTO
+from src.tools.logger import set_up_logger
 
 """
 Сделанно под следующую структуру
@@ -26,63 +26,17 @@ CREATE TABLE api(
 """
 
 
-class DataBase(AuthenticationConnector):
-    __instance = None
-
+class DataBase(DataTransferable):
     __connection: MySQLConnectionAbstract | None
     __users_db_name: str
     __api_key_db_name: str
     __logger: Logger
 
-    @classmethod
-    def get_instance(cls):
-        if cls.__instance is None:
-            cls.__instance = cls()
-        return cls.__instance
-
-    def init_connection(self):
-        self.__get_init_vars()
-        max_attempt_cnt = int(environ.get('DB_CONNECTION_ATTEMPTS'))
-        attempt = 0
-        while attempt < max_attempt_cnt:
-            try:
-                self.__connection = mysql.connector.connect(
-                    user=environ.get('DB_USER'),
-                    password=environ.get('DB_USER_PASSWORD'),
-                    host=environ.get('DB_HOST'),
-                    database=environ.get('DB_NAME'),
-                )
-            except (mysql.connector.Error, IOError) as err:
-                if attempt + 1 == max_attempt_cnt:
-                    self.__logger.error('Failed to connect to database. Exiting without __connection. %s', err)
-                    raise mysql.connector.Error
-                self.__logger.warning('Failed __connection attempt. Trying to reconnect. Remaining %d tries',
-                                      max_attempt_cnt - attempt)
-            attempt += 1
-        self.__logger.info('Successfully connected to database')
-
-    def reconnect(self) -> None:
-        self.__connection = None
-        self.init_connection()
-
-    # @staticmethod
-    # def __check_connection(func):
-    #     @wraps(func)
-    #     def _wrapper(self, *args, **kwargs):
-    #         if self.__connection is None or not self.__connection.is_connected():
-    #             self.__reconnect()
-    #         return func()
-    #
-    #     return _wrapper
-
-    def __get_init_vars(self):
-        self.__users_db_name = environ.get('USERS_TABLE_NAME')
-        self.__api_key_db_name = environ.get('API_TABLE_NAME')
+    def __init__(self, connection: MySQLConnectionAbstract):
+        self.__connection = connection
+        self.__users_db_name = getenv('USERS_TABLE_NAME')
+        self.__api_key_db_name = getenv('API_TABLE_NAME')
         self.__logger = set_up_logger('log/authentication.log')
-
-    def close_connection(self):
-        self.__connection.close()
-        del self.__connection
 
     def check_user_exists(self, user_id: int) -> bool:
         query = f'SELECT user_id FROM {self.__users_db_name} WHERE user_id = %s'
@@ -92,7 +46,7 @@ class DataBase(AuthenticationConnector):
                 cursor.execute(query, params)
                 return cursor.fetchone() is not None
         except mysql.connector.Error as err:
-            self.__logger.warning('Error while check_user_exists(). %s', err)
+            self.__logger.warning('Error while check_user_exists(). %s', err.msg)
         return False
 
     def check_apikey_exists(self, key: str) -> bool:
