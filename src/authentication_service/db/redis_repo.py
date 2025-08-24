@@ -23,8 +23,8 @@ class RedisDatabase:
         return self.__redis.get(f"{db}:{key}")
 
     def set_cache(self, db: str, key: int | str, value: int | str | bool | bytes, exp=None):
-        if exp:
-            self.__redis.set(f"{db}:{key}", exp, value)
+        if exp is not None:
+            self.__redis.set(f"{db}:{key}", value, exp)
             return
         self.__redis.set(f"{db}:{key}", value)
 

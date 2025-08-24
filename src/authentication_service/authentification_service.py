@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 import secrets
 from logging import Logger
@@ -8,7 +9,7 @@ import mysql.connector
 
 from src.authentication_service.model.model import UserDTO
 from src.authentication_service.db.redis_repo import RedisDatabase
-from src.authentication_service.util.error import APIError
+from src.authentication_service.util.error import APIError, NoUserException
 from src.authentication_service.util.error import DatabaseOperationException
 from src.authentication_service.util.interface import DataTransferable
 import redis
@@ -96,15 +97,22 @@ class AuthenticationService:
         return self.__db.check_user_exists(user_id)
 
     def get_user(self, user_id):
-        data = self.__redis_db.get_from_cache(db="user", key=user_id)
-        if data:
-            user = UserDTO.create_from_json(data)
-            if user:
-                return user
+        try:
+            data = self.__redis_db.get_from_cache(db="user", key=user_id)
+            if data:
+                user = UserDTO.create_from_json(data)
+                if user:
+                    return user
 
-        user = self.__db.get_user(user_id)
-        if not user:
-            return None
-        self.__redis_db.set_cache(db="user", key=user_id, value=user.get_data_json(),
-                                  exp=getenv("REDIS_USER_DATA_SAVE_DURATION"))
-        return user
+            user = self.__db.get_user(user_id)
+            if not user:
+                raise NoUserException("At the return statement user variable is null")
+            self.__redis_db.set_cache(db="user", key=user_id, value=user.get_data_json(),
+                                      exp=int(getenv("REDIS_USER_DATA_SAVE_DURATION")))
+            return user
+        except json.JSONDecodeError as err:
+            self.__logger.warning("Error json parsing while getting user data. %s", err)
+        except mysql.connector.Error as err:
+            self.__logger.warning("Database error while getting user data. %s", err)
+        except NoUserException as err:
+            self.__logger.warning("Error no user data. %s", err)

@@ -53,15 +53,17 @@ class BotController:
             """
             set_bot_commands_menu()
             user_id = message.from_user.id
-
-            user_exists = self.__authentication_service.has_user(user_id)
-            if not user_exists:
-                self.__authentication_service.add_user(user_id)
-                self.__bot.send_message(user_id, "Привет! Выбери свой курс:", reply_markup=get_course_keyboard())
-            else:
-                self.__bot.send_message(user_id, "Ты уже зарегистрирован!")
-                self.__bot.send_message(user_id, "На какой день тебе нужно расписание?",
-                                        reply_markup=get_persistent_keyboard())
+            try:
+                user_exists = self.__authentication_service.has_user(user_id)
+                if not user_exists:
+                    self.__authentication_service.add_user(user_id)
+                    self.__bot.send_message(user_id, "Привет! Выбери свой курс:", reply_markup=get_course_keyboard())
+                else:
+                    self.__bot.send_message(user_id, "Ты уже зарегистрирован!")
+                    self.__bot.send_message(user_id, "На какой день тебе нужно расписание?",
+                                            reply_markup=get_persistent_keyboard())
+            except Exception as err:
+                handle_error(user_id, err, "Ошибка обработки команды /start")
 
         @self.__bot.message_handler(commands=['updateinfo'])
         def handle_profile_update(message):
@@ -72,9 +74,12 @@ class BotController:
                 message: экземпляр telebot.types.Message.
             """
             user_id = message.from_user.id
-            if not self.__authentication_service.has_user(user_id):
-                self.__authentication_service.add_user(user_id)
-            self.__bot.send_message(user_id, "Привет! Выбери свой курс:", reply_markup=get_course_keyboard())
+            try:
+                if not self.__authentication_service.has_user(user_id):
+                    self.__authentication_service.add_user(user_id)
+                self.__bot.send_message(user_id, "Привет! Выбери свой курс:", reply_markup=get_course_keyboard())
+            except Exception as err:
+                handle_error(user_id, err, "Ошибка обработки команды /updateinfo")
 
         @self.__bot.message_handler(commands=['help'])
         def handle_help(message):
@@ -95,27 +100,20 @@ class BotController:
         @self.__bot.message_handler(commands=['info'])
         def handle_info(message):
             user_id = message.from_user.id
-            user = self.__authentication_service.get_user(user_id)
-            self.__bot.send_message(message.from_user.id, "Информация о тебе: \n"
-                                                          f"Твой курс: {user.get_course()}\n"
-                                                          f"Твоя группа: {user.get_main_group()}\n"
-                                                          f"Твоя подгруппа: {user.get_sub_group()}")
+            try:
+                user = self.__authentication_service.get_user(user_id)
+                self.__bot.send_message(message.from_user.id, "Информация о тебе: \n"
+                                                              f"Твой курс: {user.get_course()}\n"
+                                                              f"Твоя группа: {user.get_main_group()}\n"
+                                                              f"Твоя подгруппа: {user.get_sub_group()}")
+            except Exception as err:
+                handle_error(user_id, err, "Ошибка обработки команды /info")
 
         @self.__bot.message_handler(commands=['mistake'])
         def handle_mistake_report(message):
             self.__bot.send_message(message.from_user.id,
                                     "Подтвердите факт ошибки в расписании. Если ошибок нет, просим вас не создавать нам лишней работы!",
                                     reply_markup=get_mistake_report_keyboard())
-
-        # специальные хэндлеры для использования администратором
-        # @self.__bot.message_handler(commands=['getDB'])
-        # def handle_database_request(message):
-        #     if str(message.from_user.id) in [os.getenv("ADMIN_TG_ID1"), os.getenv("ADMIN_TG_ID2")]:
-        #         try:
-        #             with open(config.db_path, "rb") as db_file:
-        #                 bot.send_document(message.from_user.id, db_file, caption="Вот твоя база данных 📂")
-        #         except FileNotFoundError:
-        #             bot.reply_to(message, "Файл базы данных не найден! ❌")
 
         @self.__bot.message_handler(commands=['getUsersPerDay'])
         def handle_users_per_day_request(message):
@@ -128,30 +126,33 @@ class BotController:
             print(f"Запрос от {user_id}: {message.from_user.username}")
             self.__redis_db.increment_users_per_day()
 
-            if not self.__authentication_service.has_user(user_id):
-                self.__authentication_service.add_user(user_id)
-                self.__bot.send_message(user_id, "Привет! Выбери свой курс:", reply_markup=get_course_keyboard())
-            else:
-                try:
-                    out_data_formated = f"Твое расписание на {"числитель" if message.text == '/chis' else 'знаменатель'}:\n\n"
-                    days_map = {"📅 Понедельник": 0, "📅 Вторник": 1, "📅 Среда": 2, "📅 Четверг": 3, "📅 Пятница": 4,
-                                "📅 Суббота": 5}
-                    user = self.__authentication_service.get_user(user_id)
-                    week = 0 if message.text == '/chils' else 1
+            try:
+                if not self.__authentication_service.has_user(user_id):
+                    self.__authentication_service.add_user(user_id)
+                    self.__bot.send_message(user_id, "Привет! Выбери свой курс:", reply_markup=get_course_keyboard())
+                else:
+                    try:
+                        out_data_formated = f"Твое расписание на {"числитель" if message.text == '/chis' else 'знаменатель'}:\n\n"
+                        days_map = {"📅 Понедельник": 0, "📅 Вторник": 1, "📅 Среда": 2, "📅 Четверг": 3, "📅 Пятница": 4,
+                                    "📅 Суббота": 5}
+                        user = self.__authentication_service.get_user(user_id)
+                        week = 0 if message.text == '/chils' else 1
 
-                    for key, val in days_map.items():
-                        schedule = self.__parser_service.get_schedule_on_day(user, val, week=week)
-                        out_data_formated += f"📅 *Расписание занятий на {key.split(' ')[-1]}:*\n\n"
-                        for key_day, val_day in schedule.items():
-                            if val_day is None or val_day.strip() == "":
-                                val_day = "— Нет пары —"
-                            out_data_formated += f"🕒 *{key_day}*\n📖 {val_day}\n\n"
+                        for key, val in days_map.items():
+                            schedule = self.__parser_service.get_schedule_on_day(user, val, week=week)
+                            out_data_formated += f"📅 *Расписание занятий на {key.split(' ')[-1]}:*\n\n"
+                            for key_day, val_day in schedule.items():
+                                if val_day is None or val_day.strip() == "":
+                                    val_day = "— Нет пары —"
+                                out_data_formated += f"🕒 *{key_day}*\n📖 {val_day}\n\n"
 
-                    self.__bot.send_message(user_id, out_data_formated, parse_mode="Markdown")
-                except (ScheduleParserFindError, TypeError, ValueError) as e:
-                    handle_error(user_id, e,
-                                 "Возможно ошибка связана с обновлением на сервере. В таком случае просим Вас просто заново ввести данные. Мы сделам все возможное, чтобы это не повторилось.\n\n❌ Мы не смогли найти учебную группу с вашими данными.\n🔍 Убедитесь, что вы правильно ввели все данные.\n💡 Попробуйте ввести их еще раз.")
-                    handle_profile_update(message)
+                        self.__bot.send_message(user_id, out_data_formated, parse_mode="Markdown")
+                    except (ScheduleParserFindError, TypeError, ValueError) as e:
+                        handle_error(user_id, e,
+                                     "Возможно ошибка связана с обновлением на сервере. В таком случае просим Вас просто заново ввести данные. Мы сделам все возможное, чтобы это не повторилось.\n\n❌ Мы не смогли найти учебную группу с вашими данными.\n🔍 Убедитесь, что вы правильно ввели все данные.\n💡 Попробуйте ввести их еще раз.")
+                        handle_profile_update(message)
+            except Exception as err:
+                handle_error(user_id, err, "Ошибка обработки запроса расписания на неделю")
 
         @self.__bot.message_handler(commands=['getapi'])
         def handle_api_get(message: Message):

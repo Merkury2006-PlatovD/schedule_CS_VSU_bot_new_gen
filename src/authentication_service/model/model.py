@@ -33,8 +33,6 @@ class UserDTO:
 
     @classmethod
     def create_from_json(cls, json_data):
-        try:
             (user_id, course, main_group, subgroup) = json.loads(json_data).values()
             return UserDTO(user_id, int(course), int(main_group), int(subgroup))
-        except json.JSONDecodeError:
-            return None
+

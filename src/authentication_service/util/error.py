@@ -18,3 +18,13 @@ class APIError(Exception):
 
     def __str__(self):
         return f"Ошибка {self.message}"
+
+
+class NoUserException(Exception):
+    """User wasn't found"""
+
+    def __init__(self, *args):
+        self.message = args[0]
+
+    def __str__(self):
+        return f"Ошибка {self.message}"
