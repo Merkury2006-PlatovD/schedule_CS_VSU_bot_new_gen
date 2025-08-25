@@ -34,11 +34,13 @@ class ScheduleParser:
             values = []
             for cell in row:
                 val = self._get_merged_cell_value(cell)
-                matcher = re.search(r"\d+", val)
-                if matcher is not None:
-                    values.append(matcher.group())
-                else:
-                    values.append("NN")
+
+                if val:
+                    matcher = re.search(r"\d+", val)
+                    if matcher is not None:
+                        values.append(matcher.group())
+                    else:
+                        values.append("NN")
             headers.append(values)
         return headers
 

@@ -44,7 +44,7 @@ def download_schedule_file(request):
             while not done:
                 status, done = downloader.next_chunk()
     except (HttpError, HttpLib2Error) as err:
-        logger.warning("Ошибка зпгрузки файла с расписанием. Попытаемся использовать резервную копию. %s", err)
+        logger.warning("Ошибка загрузки файла с расписанием. Попытаемся использовать резервную копию. %s", err)
         dereserve_file()
 
 
