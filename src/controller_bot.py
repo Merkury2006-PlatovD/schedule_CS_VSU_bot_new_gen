@@ -8,6 +8,7 @@ from src.authentication_service.util.enum import UpdateType
 from src.authentication_service.util.error import APIError
 from src.parser_service.parser_service import ParserService
 from src.parser_service.util.error import ScheduleParserFindError
+from src.tools.error import TooFrequentRequestException
 from src.tools.keyboard_generators import *
 from src.authentication_service.db.redis_repo import RedisDatabase
 
@@ -44,7 +45,7 @@ class BotController:
             ])
 
         @self.__bot.message_handler(commands=['start'])
-        def handle_start(message):
+        def handle_start(message: Message):
             """
             Слушает команду "/start" и выполняет действия в зависимости от результата user_exists(user_id). Начинает работу всего бота.
 
@@ -54,6 +55,8 @@ class BotController:
             set_bot_commands_menu()
             user_id = message.from_user.id
             try:
+                if not self.__redis_db.check_requests_rate(user_id):
+                    raise TooFrequentRequestException("Слишком частые запросы")
                 user_exists = self.__authentication_service.has_user(user_id)
                 if not user_exists:
                     self.__authentication_service.add_user(user_id)
@@ -63,6 +66,7 @@ class BotController:
                     self.__bot.send_message(user_id, "На какой день тебе нужно расписание?",
                                             reply_markup=get_persistent_keyboard())
             except Exception as err:
+                self.__logger.warning("Ошибка обработки команды /start. %s", err)
                 handle_error(user_id, err, "Ошибка обработки команды /start")
 
         @self.__bot.message_handler(commands=['updateinfo'])
@@ -75,10 +79,13 @@ class BotController:
             """
             user_id = message.from_user.id
             try:
+                if not self.__redis_db.check_requests_rate(user_id):
+                    raise TooFrequentRequestException("Слишком частые запросы")
                 if not self.__authentication_service.has_user(user_id):
                     self.__authentication_service.add_user(user_id)
                 self.__bot.send_message(user_id, "Привет! Выбери свой курс:", reply_markup=get_course_keyboard())
             except Exception as err:
+                self.__logger.warning("Ошибка обработки команды /updateinfo. %s", err)
                 handle_error(user_id, err, "Ошибка обработки команды /updateinfo")
 
         @self.__bot.message_handler(commands=['help'])
@@ -101,12 +108,15 @@ class BotController:
         def handle_info(message):
             user_id = message.from_user.id
             try:
+                if not self.__redis_db.check_requests_rate(user_id):
+                    raise TooFrequentRequestException("Слишком частые запросы")
                 user = self.__authentication_service.get_user(user_id)
                 self.__bot.send_message(message.from_user.id, "Информация о тебе: \n"
                                                               f"Твой курс: {user.get_course()}\n"
                                                               f"Твоя группа: {user.get_main_group()}\n"
                                                               f"Твоя подгруппа: {user.get_sub_group()}")
             except Exception as err:
+                self.__logger.warning("Ошибка обработки команды /info. %s", err)
                 handle_error(user_id, err, "Ошибка обработки команды /info")
 
         @self.__bot.message_handler(commands=['mistake'])
@@ -127,6 +137,8 @@ class BotController:
             self.__redis_db.increment_users_per_day()
 
             try:
+                if not self.__redis_db.check_requests_rate(user_id):
+                    raise TooFrequentRequestException("Слишком частые запросы")
                 if not self.__authentication_service.has_user(user_id):
                     self.__authentication_service.add_user(user_id)
                     self.__bot.send_message(user_id, "Привет! Выбери свой курс:", reply_markup=get_course_keyboard())
@@ -152,15 +164,19 @@ class BotController:
                                      "Возможно ошибка связана с обновлением на сервере. В таком случае просим Вас просто заново ввести данные. Мы сделам все возможное, чтобы это не повторилось.\n\n❌ Мы не смогли найти учебную группу с вашими данными.\n🔍 Убедитесь, что вы правильно ввели все данные.\n💡 Попробуйте ввести их еще раз.")
                         handle_profile_update(message)
             except Exception as err:
+                self.__logger.warning("Ошибка обработки запроса расписания на неделю. %s", err)
                 handle_error(user_id, err, "Ошибка обработки запроса расписания на неделю")
 
         @self.__bot.message_handler(commands=['getapi'])
         def handle_api_get(message: Message):
             user_id = message.from_user.id
             try:
+                if not self.__redis_db.check_requests_rate(user_id):
+                    raise TooFrequentRequestException("Слишком частые запросы")
                 api_key = self.__authentication_service.add_new_api_key(user_id)
                 self.__bot.send_message(user_id, f"Your API key:\n{api_key}")
             except APIError as err:
+                self.__logger.warning("Ошибка создания API ключа. %s", err)
                 handle_error(user_id, err,
                              "Ошибка создания API ключа. Убедитесь, что он не был создан до настоящего времени")
 
@@ -168,10 +184,13 @@ class BotController:
         def handle_api_key_delete(message: Message):
             user_id = message.from_user.id
             try:
+                if not self.__redis_db.check_requests_rate(user_id):
+                    raise TooFrequentRequestException("Слишком частые запросы")
                 self.__authentication_service.remove_api_key(user_id)
                 self.__bot.send_message(user_id, "Ключ API успешно удален! Вы можете создать новый командой getapi")
             except Exception as err:
-                handle_error(user_id, err, 'Ошибка удаления API')
+                self.__logger.warning("Ошибка удаления API ключа. %s", err)
+                handle_error(user_id, err, 'Ошибка удаления API ключа')
 
         @self.__bot.message_handler(
             func=lambda message: message.text not in ["📅 Понедельник", "📅 Вторник", "📅 Среда", "📅 Четверг", "📅 Пятница",
@@ -188,54 +207,78 @@ class BotController:
             days_map = {"📅 Понедельник": 0, "📅 Вторник": 1, "📅 Среда": 2, "📅 Четверг": 3, "📅 Пятница": 4,
                         "📅 Суббота": 5}
             user_id = message.from_user.id
-            print(f"Запрос от {user_id}: {message.from_user.username}")
-            self.__redis_db.increment_users_per_day()
-            day = days_map[message.text]
             try:
-                week_type = self.__redis_db.get_week_type()
-                user = self.__authentication_service.get_user(user_id)
-                schedule = self.__parser_service.get_schedule_on_day(user, day)
-                out_data_formated = f"📅 *Расписание занятий на {message.text.split(' ')[-1]}/{'числ' if week_type == 0 else 'знам'}:*\n\n"
+                if not self.__redis_db.check_requests_rate(user_id):
+                    raise TooFrequentRequestException("Слишком частые запросы")
+                print(f"Запрос от {user_id}: {message.from_user.username}")
+                self.__redis_db.increment_users_per_day()
+                day = days_map[message.text]
+                try:
+                    week_type = self.__redis_db.get_week_type()
+                    user = self.__authentication_service.get_user(user_id)
+                    schedule = self.__parser_service.get_schedule_on_day(user, day)
+                    out_data_formated = f"📅 *Расписание занятий на {message.text.split(' ')[-1]}/{'числ' if week_type == 0 else 'знам'}:*\n\n"
 
-                for key, val in schedule.items():
-                    if val is None or val.strip() == "":
-                        val = "— Нет пары —"
+                    for key, val in schedule.items():
+                        if val is None or val.strip() == "":
+                            val = "— Нет пары —"
 
-                    out_data_formated += f"🕒 *{key}*\n📖 {val}\n\n"
+                        out_data_formated += f"🕒 *{key}*\n📖 {val}\n\n"
 
-                self.__bot.send_message(user_id, out_data_formated, parse_mode="Markdown")
-            except (ScheduleParserFindError, TypeError, ValueError) as e:
-                handle_error(user_id, e,
-                             "Возможно ошибка связана с обновлением на сервере. В таком случае просим Вас просто заново ввести данные. Мы сделам все возможное, чтобы это не повторилось.\n\n❌ Мы не смогли найти учебную группу с вашими данными.\n🔍 Убедитесь, что вы правильно ввели все данные.\n💡 Попробуйте ввести их еще раз.")
-                handle_profile_update(message)
+                    self.__bot.send_message(user_id, out_data_formated, parse_mode="Markdown")
+                except (ScheduleParserFindError, TypeError, ValueError) as e:
+                    handle_error(user_id, e,
+                                 "Возможно ошибка связана с обновлением на сервере. В таком случае просим Вас просто заново ввести данные. Мы сделам все возможное, чтобы это не повторилось.\n\n❌ Мы не смогли найти учебную группу с вашими данными.\n🔍 Убедитесь, что вы правильно ввели все данные.\n💡 Попробуйте ввести их еще раз.")
+                    handle_profile_update(message)
+            except Exception as err:
+                self.__logger.warning("Ошибка во время обработки запроса на расписание. %s", err)
+                handle_error(user_id, err, "Ошибка во время обработки запроса на расписание")
 
         @self.__bot.callback_query_handler(func=lambda call: call.data.startswith("course_"))
         def handle_course(call):
             user_id = call.from_user.id
-            course = int(call.data.split("_")[1])
+            try:
+                if not self.__redis_db.check_requests_rate(user_id):
+                    raise TooFrequentRequestException("Слишком частые запросы")
+                course = int(call.data.split("_")[1])
 
-            self.__authentication_service.update_user_data(UpdateType.course, user_id, course)
-            keyboard = get_group_keyboard()
-            self.__bot.send_message(user_id, "Теперь выбери свою группу:", reply_markup=keyboard)
+                self.__authentication_service.update_user_data(UpdateType.course, user_id, course)
+                keyboard = get_group_keyboard()
+                self.__bot.send_message(user_id, "Теперь выбери свою группу:", reply_markup=keyboard)
+            except Exception as err:
+                self.__logger.warning("Ошибка сохранения номера курса. %s", err)
+                handle_error(user_id, err, "Ошибка сохранения номера курса")
 
         @self.__bot.callback_query_handler(func=lambda call: call.data.startswith("group_"))
         def handle_group(call):
             user_id = call.from_user.id
-            group = int(call.data.split("_")[1])
+            try:
+                if not self.__redis_db.check_requests_rate(user_id):
+                    raise TooFrequentRequestException("Слишком частые запросы")
+                group = int(call.data.split("_")[1])
 
-            self.__authentication_service.update_user_data(UpdateType.main_group, user_id, group)
-            keyboard = get_subgroup_keyboard()
-            self.__bot.send_message(user_id, "Теперь выбери свою подгруппу:", reply_markup=keyboard)
+                self.__authentication_service.update_user_data(UpdateType.main_group, user_id, group)
+                keyboard = get_subgroup_keyboard()
+                self.__bot.send_message(user_id, "Теперь выбери свою подгруппу:", reply_markup=keyboard)
+            except Exception as err:
+                self.__logger.warning("Ошибка сохранения номера группы. %s", err)
+                handle_error(user_id, err, "Ошибка сохранения номера группы")
 
         @self.__bot.callback_query_handler(func=lambda call: call.data.startswith("subgroup_"))
         def handle_subgroup(call):
             user_id = call.from_user.id
-            subgroup = int(call.data.split("_")[-1])
+            try:
+                if not self.__redis_db.check_requests_rate(user_id):
+                    raise TooFrequentRequestException("Слишком частые запросы")
+                subgroup = int(call.data.split("_")[-1])
 
-            self.__authentication_service.update_user_data(UpdateType.sub_group, user_id, subgroup)
-            self.__bot.send_message(user_id, "Отлично! Данные сохранены.")
-            self.__bot.send_message(user_id, "На какой день тебе нужно расписание?",
-                                    reply_markup=get_persistent_keyboard())
+                self.__authentication_service.update_user_data(UpdateType.sub_group, user_id, subgroup)
+                self.__bot.send_message(user_id, "Отлично! Данные сохранены.")
+                self.__bot.send_message(user_id, "На какой день тебе нужно расписание?",
+                                        reply_markup=get_persistent_keyboard())
+            except Exception as err:
+                self.__logger.warning("Ошибка сохранения номера подгруппы. %s", err)
+                handle_error(user_id, err, "Ошибка сохранения номера подгруппы")
 
         @self.__bot.callback_query_handler(func=lambda call: call.data.startswith("mistake"))
         def handle_report_send(call):

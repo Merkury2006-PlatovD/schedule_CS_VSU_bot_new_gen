@@ -2,7 +2,7 @@ from logging import Logger
 from os import getenv
 
 import mysql.connector
-from mysql.connector.aio import MySQLConnectionAbstract
+from mysql.connector.aio import MySQLConnection
 
 from src.authentication_service.util.interface import DataTransferable
 from src.authentication_service.model.model import UserDTO
@@ -27,12 +27,12 @@ CREATE TABLE api(
 
 
 class DataBase(DataTransferable):
-    __connection: MySQLConnectionAbstract | None
+    __connection: MySQLConnection | None
     __users_db_name: str
     __api_key_db_name: str
     __logger: Logger
 
-    def __init__(self, connection: MySQLConnectionAbstract):
+    def __init__(self, connection: MySQLConnection):
         self.__connection = connection
         self.__users_db_name = getenv('USERS_TABLE_NAME')
         self.__api_key_db_name = getenv('API_TABLE_NAME')

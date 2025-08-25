@@ -1,5 +1,11 @@
+import json
+import os
+import time
+
 from redis import Redis
 import redis
+
+from src.authentication_service.model.model import RequestDTO
 from src.tools.logger import set_up_logger
 
 """
@@ -7,6 +13,7 @@ from src.tools.logger import set_up_logger
   - api: для хранение пар пользователь-ключ
   - user: для хранения json UserDTO model 
   - var: для хранения переменных, используемых в работе парсера
+  - request: для хранения данных о запросах и защите от нагрузочных атак
 """
 
 
@@ -15,6 +22,7 @@ class RedisDatabase:
 
     __redis: Redis
     __logger = set_up_logger('./log/redis_db.log')
+    __refill_interval: int = int(os.getenv("TOKEN_REFILL_INTERVAL_SEC"))
 
     def __init__(self, redis_init):
         self.__redis = redis_init
@@ -33,6 +41,25 @@ class RedisDatabase:
             self.__redis.delete(f"{db}:{key}")
         except redis.RedisError as err:
             self.__logger.warning("Redis failed to delete data cache. %s", err)
+
+    def check_requests_rate(self, user_id: int) -> bool:
+        cur_time = time.time()
+        raw_data = self.get_from_cache(db="request", key=user_id)
+
+        if raw_data is None:
+            request = RequestDTO(user_id, int(cur_time), 4)
+            self.set_cache(db="request", key=user_id, value=request.get_data_json(),
+                           exp=int(self.__refill_interval * 2))
+            return True
+
+        request = RequestDTO.create_from_json(raw_data)
+        if cur_time - request.get_timing() < self.__refill_interval:
+            request.decrease_tokens()
+        else:
+            request.set_tokens(5)
+        self.set_cache(db="request", key=user_id, value=request.get_data_json(),
+                       exp=int(self.__refill_interval * 2))
+        return request.get_tokens() > 0
 
     def get_week_type(self) -> int:
         week_type = self.__redis.get("var:week_type")
