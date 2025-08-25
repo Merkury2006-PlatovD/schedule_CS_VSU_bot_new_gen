@@ -46,6 +46,9 @@ class RequestDTO:
     def get_user_id(self):
         return self.__user_id
 
+    def set_timing(self, timing: int):
+        self.__timing = timing
+
     def get_timing(self):
         return self.__timing
 

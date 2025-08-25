@@ -57,6 +57,7 @@ class RedisDatabase:
             request.decrease_tokens()
         else:
             request.set_tokens(5)
+        request.set_timing(cur_time)
         self.set_cache(db="request", key=user_id, value=request.get_data_json(),
                        exp=int(self.__refill_interval * 2))
         return request.get_tokens() > 0
