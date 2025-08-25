@@ -21,6 +21,7 @@
   <img src="https://img.shields.io/badge/API-доступно-orange" alt="API">
 </p>
 
+<br>
 ---
 ## О проекте
 
@@ -32,6 +33,7 @@
 - 🤖 Удобный Telegram-бот
 - 🌐 REST API для интеграции с другими сервисами
 
+<br>
 ---
 ## Быстрый старт
 
@@ -129,6 +131,7 @@ function displaySchedule(data) {
 ```
 > **Важно:** Замените `<API ключ>` на ваш действительный API-ключ.
 
+<br>
 ---
 ## API документация
 
@@ -176,6 +179,7 @@ https://platovd.ru/api/schedule/{token}/{course}/{group}/{subgroup}/{day}
 }
 ```
 
+<br>
 ---
 ## Разработчики
 
@@ -184,6 +188,7 @@ https://platovd.ru/api/schedule/{token}/{course}/{group}/{subgroup}/{day}
 - [**Меркулов Роман**](https://github.com/Merkury2006) 
 - [**Платов Дмитрий**](https://github.com/PlatovD)
 
+<br>
 ---
 ## Обратная связь
 
@@ -196,7 +201,7 @@ https://platovd.ru/api/schedule/{token}/{course}/{group}/{subgroup}/{day}
 
 **Свяжитесь с нами:**
 - Через Issues на GitHub
-- Лично в Telegram: [Платов Дмитрий](https://t.me/platovd)
+- Лично в Telegram: [Платов Дмитрий](https://t.me/DimaPlatov09)
 
 ---
 
