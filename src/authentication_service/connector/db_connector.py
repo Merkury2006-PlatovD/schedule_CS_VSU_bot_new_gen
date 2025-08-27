@@ -1,3 +1,5 @@
+from argparse import ArgumentError
+from functools import wraps
 from os import environ
 from typing import Any
 from mysql.connector import MySQLConnection
@@ -44,3 +46,21 @@ class DBConnector(DatabaseConnectable):
     def reconnect(cls) -> None:
         cls.__db = None
         cls.init_connection()
+
+    @staticmethod
+    def check_connection(func: callable):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            if self._connection is None:
+                raise ValueError("Connection must be not null while checking")
+
+            if not self._connection.is_connected():
+                try:
+                    self._connection.reconnect(attempts=3)
+                except (mysql.connector.Error, IOError) as err:
+                    raise mysql.connector.Error(f"Failed to reconnect. {err}")
+
+            res = func(self, *args, **kwargs)
+            return res
+
+        return wrapper
