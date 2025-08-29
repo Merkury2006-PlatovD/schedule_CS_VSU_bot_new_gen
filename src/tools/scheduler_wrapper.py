@@ -20,6 +20,7 @@ class SchedulerWrapper:
     @classmethod
     def on_start(cls):
         download_and_update()
+        cls.__scheduler.start()
 
     @classmethod
     def get_day_from_num(cls, day: int):

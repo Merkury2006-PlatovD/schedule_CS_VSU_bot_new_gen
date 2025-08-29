@@ -1,9 +1,8 @@
-import json
 import os
 import time
 
-from redis import Redis
 import redis
+from redis import Redis
 
 from src.authentication_service.model.model import RequestDTO
 from src.tools.logger import set_up_logger
