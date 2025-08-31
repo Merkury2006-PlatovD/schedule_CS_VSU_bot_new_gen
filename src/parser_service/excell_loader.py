@@ -81,5 +81,5 @@ def download_and_update():
         logger.error("Фатальная ошибка обновления расписания. %s", err)
         raise NoReserveFileError()
     except Exception as err:
-        logger.info(f"!!!Расписание НЕ обновлено {current_date.strftime('%d %B %Y, %H:%M:%S')}. %s", err)
+        logger.error(f"!!!Расписание НЕ обновлено {current_date.strftime('%d %B %Y, %H:%M:%S')}. %s", err)
         raise err

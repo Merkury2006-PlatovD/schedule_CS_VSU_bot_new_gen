@@ -6,4 +6,5 @@ def set_up_logger(path_to_save: str) -> logging.Logger:
     file_handler = logging.FileHandler(path_to_save)
     file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
     logger.addHandler(file_handler)
+    logger.setLevel(logging.INFO)
     return logger
