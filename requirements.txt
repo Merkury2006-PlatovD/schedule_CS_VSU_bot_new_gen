@@ -39,6 +39,7 @@ Pygments==2.19.2
 pyparsing==3.2.3
 pyTelegramBotAPI==4.28.0
 pytest==8.4.1
+pytz==2025.2
 redis==6.4.0
 requests==2.32.4
 requests-oauthlib==2.0.0
