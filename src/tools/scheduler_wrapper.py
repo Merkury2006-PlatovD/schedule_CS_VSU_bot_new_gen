@@ -16,7 +16,7 @@ class SchedulerWrapper:
     @classmethod
     def init(cls):
         cls.__scheduler.configure(timezone=utc)
-        cls.__scheduler.add_job(download_and_update, 'cron', hour='0-24', minute='*/20', second='5')
+        cls.__scheduler.add_job(download_and_update, 'cron', hour='0-23', minute='*/20', second='5')
         cls.__scheduler.add_job(cls.__redis_db.change_week_type, 'cron', day_of_week=5, hour=20, minute=0, second=0)
 
     @classmethod

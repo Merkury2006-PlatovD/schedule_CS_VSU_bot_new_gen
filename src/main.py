@@ -73,7 +73,7 @@ async def lifespan(app_fastAPI: FastAPI) -> AsyncIterator[Dict[str, Any]]:
         app_fastAPI.include_router(api_controller.get_router())
         yield {}
     except Exception as err:
-        logger.error("Error during running application. %s", err)
+        print("Error during running application. %s", err)
 
 
 app = FastAPI(lifespan=lifespan)

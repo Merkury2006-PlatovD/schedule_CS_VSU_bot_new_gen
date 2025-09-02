@@ -1,3 +1,5 @@
+from importlib import reload
+
 import openpyxl
 import re
 from openpyxl.cell.cell import MergedCell

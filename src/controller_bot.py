@@ -134,7 +134,7 @@ class BotController:
         def handle_chis_znam_schedule(message):
             user_id = message.from_user.id
             print(f"Запрос от {user_id}: {message.from_user.username}")
-            self.__redis_db.increment_users_per_day()
+            # self.__redis_db.increment_users_per_day()
 
             try:
                 if not self.__redis_db.check_requests_rate(user_id):
@@ -211,7 +211,7 @@ class BotController:
                 if not self.__redis_db.check_requests_rate(user_id):
                     raise TooFrequentRequestException("Слишком частые запросы")
                 print(f"Запрос от {user_id}: {message.from_user.username}")
-                self.__redis_db.increment_users_per_day()
+                # self.__redis_db.increment_users_per_day()
                 day = days_map[message.text]
                 try:
                     week_type = self.__redis_db.get_week_type()
