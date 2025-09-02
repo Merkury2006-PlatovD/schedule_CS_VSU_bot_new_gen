@@ -1,17 +1,23 @@
-from importlib import reload
-
-import openpyxl
 import re
+import openpyxl
 from openpyxl.cell.cell import MergedCell
+
 from src.parser_service.util.error import ScheduleParserFindError, NotFoundListError
 
 
 class ScheduleParser:
     time_lessons = ['8:00-9:35', '9:45-11:20', '11:30-13:05', '13:25-15:00',
                     '15:10-16:45', '16:55-18:30', '18:40-20:00', '20:10-21:30']
+    filename: str
 
     def __init__(self, filename):
-        self.wb = openpyxl.load_workbook(filename)
+        self.filename = filename
+        self.all_courses = None
+        self.sheet = None
+        self.wb = None
+
+    def refresh_workbook(self):
+        self.wb = openpyxl.load_workbook(self.filename)
         self.sheet = self.__find_required_list()
         print(f"Бот использует лист под названием: {self.sheet.title}")
         self.all_courses = self._parse_headers()

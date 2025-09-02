@@ -39,12 +39,14 @@ async def lifespan(app_fastAPI: FastAPI) -> AsyncIterator[Dict[str, Any]]:
         redis_db = RedisDatabase(redis_init=RedisConnector.get_connection())
 
         # starting updaters (need to create resetter for users_per_day)
+        parser_service = ParserService(parser=ScheduleParser(environ.get('MAIN_SCHEDULE_PATH')), redis=redis_db)
+
         SchedulerWrapper.set_redis_db(redis_db)
+        SchedulerWrapper.set_parser_service(parser_service)
         SchedulerWrapper.init()
         SchedulerWrapper.on_start()
 
         # start parser service
-        parser_service = ParserService(parser=ScheduleParser(environ.get('MAIN_SCHEDULE_PATH')), redis=redis_db)
 
         # starting auth service
         authentication_service = AuthenticationService(database=db, redis_init=redis_db)

@@ -1,8 +1,10 @@
 from logging import Logger
+from os import environ
 
 from src.authentication_service.model.model import UserDTO
 from src.authentication_service.db.redis_repo import RedisDatabase
 from src.parser_service.excell_converter import ScheduleParser
+from src.parser_service.excell_loader import download_and_update
 from src.parser_service.util.error import ParserError
 from src.tools.logger import set_up_logger
 
@@ -26,3 +28,10 @@ class ParserService:
             return schedule
         except ParserError as err:
             raise err
+
+    def refresh_parser(self):
+        self.__parser.refresh_workbook()
+
+    def refresh_schedule(self):
+        download_and_update()
+        self.refresh_parser()
