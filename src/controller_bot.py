@@ -148,7 +148,7 @@ class BotController:
                         days_map = {"📅 Понедельник": 0, "📅 Вторник": 1, "📅 Среда": 2, "📅 Четверг": 3, "📅 Пятница": 4,
                                     "📅 Суббота": 5}
                         user = self.__authentication_service.get_user(user_id)
-                        week = 0 if message.text == '/chils' else 1
+                        week = 0 if message.text == '/chis' else 1
 
                         for key, val in days_map.items():
                             schedule = self.__parser_service.get_schedule_on_day(user, val, week=week)
